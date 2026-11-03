@@ -1,41 +1,59 @@
-
 <!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title>计算比较任务</title>
-
-  <!-- jsPsych 核心库 -->
-  <script src="https://unpkg.com/jspsych@7.3.4"></script>
-
-  <!-- jsPsych 插件 -->
-  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
-  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.3"></script>
-
-  <!-- 样式 -->
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
   <link rel="stylesheet" href="css/style.css">
+
+  <!-- jsPsych 7 core and compatible plugins -->
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
 </head>
-
 <body>
-  <!-- 实验配置 -->
   <script src="js/config.js"></script>
-
-  <!-- 题目生成 -->
   <script src="js/generator.js"></script>
-
-  <!-- 数据保存 -->
   <script src="js/storage.js"></script>
-
-  <!-- 实验主程序 -->
   <script src="js/app.js"></script>
-
-  <!-- 启动中文版实验 -->
   <script>
-    window.startComet('zh');
+    // Use the survey-likert release listed in jsPsych v7 documentation.
+    // If one CDN fails, automatically try the other before starting.
+    function loadScript(url) {
+      return new Promise(function(resolve, reject) {
+        var script = document.createElement('script');
+        script.src = url;
+        script.onload = resolve;
+        script.onerror = function() { script.remove(); reject(new Error('Failed to load ' + url)); };
+        document.head.appendChild(script);
+      });
+    }
+
+    (async function() {
+      var urls = [
+        'https://cdn.jsdelivr.net/npm/@jspsych/plugin-survey-likert@1.1.3/dist/index.browser.min.js',
+        'https://unpkg.com/@jspsych/plugin-survey-likert@1.1.3/dist/index.browser.min.js'
+      ];
+      for (var i = 0; i < urls.length && typeof window.jsPsychSurveyLikert === 'undefined'; i++) {
+        try { await loadScript(urls[i]); }
+        catch (error) { console.warn(error.message); }
+      }
+
+      var globals = ['initJsPsych', 'jsPsychHtmlButtonResponse',
+                     'jsPsychHtmlKeyboardResponse', 'jsPsychSurveyLikert', 'startComet'];
+      var missing = globals.filter(function(key) { return typeof window[key] === 'undefined'; });
+      if (missing.length) {
+        console.error('Missing dependencies:', missing);
+        document.body.innerHTML = '<main style="max-width:680px;margin:12vh auto;font:16px/1.7 sans-serif;padding:24px">' +
+          '<h2>实验无法启动</h2>' +
+          '<p>部分实验组件加载失败。请检查网络连接、关闭可能拦截 CDN 的插件，然后刷新页面。</p>' +
+          '<pre>' + missing.join(', ') + '</pre></main>';
+        return;
+      }
+      window.startComet('zh');
+    })();
   </script>
 </body>
 </html>
