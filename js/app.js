@@ -78,8 +78,13 @@ function summarize(){const trials=session.records.filter(x=>x.event==='calculati
  return {level,attempts:attempts.length,passed:Boolean(successful),attempt_results:attempts.map(a=>({attempt:a.attempt,correct_count:a.correct_count,error_count:a.error_count,accuracy:a.accuracy,passed:a.passed})),n_total:rr.length,accuracy:selection.length?selection.filter(r=>r.correct).length/selection.length:null,mean_correct_rt_ms:(()=>{const v=selection.filter(r=>r.correct&&Number.isFinite(r.rt_ms)).map(r=>r.rt_ms);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})()};});}
 function makeTrial(qOrGetter,blockIndex,trialNumber,practice,attemptGetter){let q,active=false;
  return {type:jsPsychHtmlButtonResponse,
- on_start:()=>{q=typeof qOrGetter==='function'?qOrGetter():qOrGetter;},
  stimulus:()=>{
+  // jsPsych can evaluate stimulus before on_start. Resolve the question here
+  // so q is defined when its fields are used, including looped attempts.
+  q=typeof qOrGetter==='function'?qOrGetter():qOrGetter;
+  if(!q || typeof q.arithmeticExpression!=='string'){
+   throw new Error('Invalid generated question. Check js/generator.js and its makeBlock() output.');
+  }
   const title='<div class="trial-progress">'+(practice?t.practice:(t.levelProgress+' '+(blockIndex+1)+'/6 · Lv'+q.level+' · '+t.attemptLabel+' '+attemptGetter()+'/'+MAX_ATTEMPTS+' · '+trialNumber+'/'+c.trialsPerLevel))+'</div>';
   return title+'<div class="formula">'+q.arithmeticExpression+'</div><div class="comparison">'+(lang==='ja'?t.question+' <strong>'+q.comparison+'</strong>':t.question+'：<strong>'+q.comparison+'</strong>')+'</div><div class="keyhint">F / J</div>';
  },
