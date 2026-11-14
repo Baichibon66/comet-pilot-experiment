@@ -39,20 +39,22 @@ sequence.forEach((level,blockIndex)=>{
   trialGroup.push(feedbackTrial());
  }
  trialGroup.push(infoTrial(()=>{
-  const r=attemptResult;
-  return '<h2>'+(r.passed?t.attemptPass:(attempt>=MAX_ATTEMPTS?t.attemptStop:t.attemptRetry))+'</h2>'+
-  '<p>'+t.attemptLabel+'：'+attempt+'/'+MAX_ATTEMPTS+'</p>'+
-  '<p>'+t.scoreLabel+'：'+r.correct_count+'/'+r.total_count+' ('+Math.round(r.accuracy*100)+'%)</p>';
- },[t.next],{
-  on_start:()=>{
+  // jsPsych evaluates a function-valued stimulus BEFORE on_start.
+  // Calculate the attempt summary before reading its fields.
+  if (!attemptResult || attemptResult.attempt !== attempt) {
    const rows=session.records.filter(r=>r.event==='calculation'&&!r.practice&&r.block_index===blockIndex+1&&r.attempt===attempt);
-   const correct=rows.filter(r=>r.correct).length;
+   const correct=rows.filter(r=>r.correct===true).length;
    attemptResult={event:'attempt_summary',level,block_index:blockIndex+1,attempt,correct_count:correct,error_count:rows.length-correct,total_count:rows.length,accuracy:rows.length?correct/rows.length:0,passed:rows.length===c.trialsPerLevel&&correct>=c.trialsPerLevel-1,local_timestamp:new Date().toISOString()};
    passed=attemptResult.passed;
    session.block_attempts.push({...attemptResult});
    session.records.push({...attemptResult});
    try{localStorage.setItem('comet_last_session',JSON.stringify(session));}catch{}
-  },
+  }
+  const r=attemptResult;
+  return '<h2>'+(r.passed?t.attemptPass:(attempt>=MAX_ATTEMPTS?t.attemptStop:t.attemptRetry))+'</h2>'+
+  '<p>'+t.attemptLabel+'：'+attempt+'/'+MAX_ATTEMPTS+'</p>'+
+  '<p>'+t.scoreLabel+'：'+r.correct_count+'/'+r.total_count+' ('+Math.round(r.accuracy*100)+'%)</p>';
+ },[t.next],{
   on_finish:()=>{if(!passed&&attempt>=MAX_ATTEMPTS){session.quality_status='failed_accuracy';session.failure_level=level;session.attention_screening_failed=true;session.exclusion_reason='failed_accuracy_threshold_after_3_attempts';jsPsych.endExperiment(t.endIncomplete);}}
  }));
  timeline.push({timeline:trialGroup,loop_function:()=>!passed&&attempt<MAX_ATTEMPTS});
