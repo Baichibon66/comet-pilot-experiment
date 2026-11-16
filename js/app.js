@@ -29,10 +29,10 @@ if(c.practiceTrials){timeline.push(infoTrial('<h2>'+t.practice+'</h2><p>'+t.prac
   timeline.push(feedbackTrial());
  }}
 sequence.forEach((level,blockIndex)=>{
- let attempt=0, passed=false, questions=[], attemptResult=null;
+ let attempt=0, passed=false, questions=[], attemptResult=null, questionHistory=[];
  const trialGroup=[];
  trialGroup.push(infoTrial(()=>'<h2>'+t.blockStart+' '+(blockIndex+1)+'/6 · Lv'+level+'</h2><p>'+t.attemptInfo+(attempt+1)+t.attemptSuffix+'</p>',[t.next],{
-  on_start:()=>{attempt++;questions=G.makeBlock(level,c.trialsPerLevel);}
+  on_start:()=>{attempt++;questions=G.makeBlock(level,c.trialsPerLevel,questionHistory);questionHistory.push(...questions);}
  }));
  for(let i=0;i<c.trialsPerLevel;i++){
   trialGroup.push(makeTrial(()=>questions[i],blockIndex,i+1,false,()=>attempt));
