@@ -70,34 +70,34 @@ function feedbackTrial(){return {type:jsPsychHtmlKeyboardResponse,stimulus:()=>{
  const r=[...session.records].reverse().find(x=>x.event==='calculation');
  return '<h2>'+(r&&r.correct?t.practiceFeedbackCorrect:t.practiceFeedbackWrong)+'</h2>';
 },choices:'NO_KEYS',trial_duration:650};}
-async function showFinal(){const result=await S.save(session);const display=document.querySelector('#jspsych-content')||document.body;display.innerHTML='<h2>'+t.finish+'</h2><p>'+(session.complete?t.finishMessage:t.endIncomplete)+'</p><p id="save-status" class="status"></p><div id="save-actions"></div><p class="muted">'+t.downloadHint+'</p>';
-const status=document.getElementById('save-status');const actions=document.getElementById('save-actions');status.textContent=result.ok?t.saved:(c.storageMode==='local'?t.local:t.failed+(result.detail?' ('+result.detail+')':''));
-const add=(label,fn)=>{const b=document.createElement('button');b.className='jspsych-btn';b.textContent=label;b.onclick=fn;actions.appendChild(b)};
-add(t.json,()=>S.exportJson(session));add(t.csv,()=>S.exportCsv(compactRows(session),sid));if(!result.ok&&c.storageMode!=='local')add(t.retry,async()=>{status.textContent='…';const r=await S.save(session);status.textContent=r.ok?t.saved:t.failed+' '+(r.detail||'')});
-if(c.downloadBackupOnFinish){try{S.exportJson(session);S.exportCsv(compactRows(session),sid);}catch{}}}
-function summarize(){const trials=session.records.filter(x=>x.event==='calculation'&&!x.practice);
- return sequence.map(level=>{const rr=trials.filter(r=>r.level===level);const attempts=session.block_attempts.filter(r=>r.level===level);const successful=attempts.find(r=>r.passed);const selection=successful?rr.filter(r=>r.attempt===successful.attempt):rr;
- return {level,attempts:attempts.length,passed:Boolean(successful),attempt_results:attempts.map(a=>({attempt:a.attempt,correct_count:a.correct_count,error_count:a.error_count,accuracy:a.accuracy,passed:a.passed})),n_total:rr.length,accuracy:selection.length?selection.filter(r=>r.correct).length/selection.length:null,mean_correct_rt_ms:(()=>{const v=selection.filter(r=>r.correct&&Number.isFinite(r.rt_ms)).map(r=>r.rt_ms);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})()};});}
-function makeTrial(qOrGetter,blockIndex,trialNumber,practice,attemptGetter){let q,active=false;
- return {type:jsPsychHtmlButtonResponse,
- stimulus:()=>{
-  // jsPsych can evaluate stimulus before on_start. Resolve the question here
-  // so q is defined when its fields are used, including looped attempts.
-  q=typeof qOrGetter==='function'?qOrGetter():qOrGetter;
-  if(!q || typeof q.arithmeticExpression!=='string'){
-   throw new Error('Invalid generated question. Check js/generator.js and its makeBlock() output.');
-  }
-  const title='<div class="trial-progress">'+(practice?t.practice:(t.levelProgress+' '+(blockIndex+1)+'/6 · Lv'+q.level+' · '+t.attemptLabel+' '+attemptGetter()+'/'+MAX_ATTEMPTS+' · '+trialNumber+'/'+c.trialsPerLevel))+'</div>';
-  return title+'<div class="formula">'+q.arithmeticExpression+'</div><div class="comparison">'+(lang==='ja'?t.question+' <strong>'+q.comparison+'</strong>':t.question+'：<strong>'+q.comparison+'</strong>')+'</div><div class="keyhint">F / J</div>';
- },
- choices:[t.greater,t.less],button_html:['<button class="jspsych-btn choice">F · %choice%</button>','<button class="jspsych-btn choice">J · %choice%</button>'],
- on_load:()=>{active=true;keyHandler=e=>{if(!active||e.repeat||e.altKey||e.ctrlKey||e.metaKey)return;const n=e.key.toLowerCase()==='f'?0:e.key.toLowerCase()==='j'?1:null;if(n!==null){e.preventDefault();const bs=document.querySelectorAll('.jspsych-btn.choice');bs[n]?.click();}};document.addEventListener('keydown',keyHandler);},
- on_finish:d=>{active=false;if(keyHandler){document.removeEventListener('keydown',keyHandler);keyHandler=null;}
- session.records.push({event:'calculation',practice,level:q.level,block_index:practice?null:blockIndex+1,position:practice?null:blockIndex+1,attempt:practice?0:attemptGetter(),trial_in_block:trialNumber,trial_global:practice?null:blockIndex*c.trialsPerLevel+trialNumber,terms:q.terms,arithmetic_expression:q.arithmeticExpression,true_answer:q.sum,intermediate_carry_counts:q.carryCounts,total_carries:q.totalCarries,comparison_number:q.comparison,comparison_offset:q.offset,comparison_distance:q.comparisonDistance,crosses_decade:q.crossesDecade,correct_response:q.correctResponse===0?'greater':'less',response_index:d.response,chosen_response:d.response===0?'greater':d.response===1?'less':null,correct:d.response===q.correctResponse,rt_ms:d.rt,local_timestamp:new Date().toISOString(),time_elapsed_ms:d.time_elapsed,viewport_width:innerWidth,viewport_height:innerHeight,visibility_state:document.visibilityState});
- }};}
-// Device / attention events; no raw mouse coordinates, identifying data, or key logs are collected.
-let hiddenAt=null;document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=performance.now();session.records.push({event:'page_hidden',local_timestamp:new Date().toISOString()});}else if(hiddenAt!==null){session.records.push({event:'page_visible',hidden_duration_ms:Math.round(performance.now()-hiddenAt),local_timestamp:new Date().toISOString()});hiddenAt=null;}});
-root.addEventListener('resize',()=>{session.device.last_viewport_width=innerWidth;session.device.last_viewport_height=innerHeight;session.device.resize_count=(session.device.resize_count||0)+1;});
-jsPsych.run(timeline);
-};
-})(window);
+async function showFinal(){
+ const result=await S.save(session);
+ const display=document.querySelector('#jspsych-content')||document.body;
+ display.innerHTML='<h2>'+t.finish+'</h2><p>'+(session.complete?t.finishMessage:t.endIncomplete)+'</p><p id="save-status" class="status"></p><div id="save-actions"></div><p id="save-hint" class="muted"></p>';
+ const status=document.getElementById('save-status');
+ const actions=document.getElementById('save-actions');
+ const hint=document.getElementById('save-hint');
+ const add=(label,fn)=>{
+  const button=document.createElement('button');
+  button.className='jspsych-btn';button.textContent=label;button.onclick=fn;
+  actions.appendChild(button);
+  return button;
+ };
+ const showBackupButtons=()=>{
+  add(t.json,()=>S.exportJson(session));
+  add(t.csv,()=>S.exportCsv(compactRows(session),sid));
+ };
+ function showSaved(){
+  status.textContent=t.saved;
+  actions.replaceChildren(); // No local download when online upload succeeds.
+  hint.textContent='';
+ }
+ function showFailure(detail){
+  status.textContent=t.failed+(detail?' ('+detail+')':'');
+  actions.replaceChildren();
+  let sending=false;
+  const retryButton=add(t.retry,async()=>{
+   if(sending)return;
+   sending=true;retryButton.disabled=true;status.textContent='…';
+   try{
+    const retryResult=await S.save(session);
